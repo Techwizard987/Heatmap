@@ -1,0 +1,102 @@
+import matplotlib.patheffects as path_effects
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.ndimage import gaussian_filter
+import cmasher as cmr
+
+from mplsoccer import Pitch, VerticalPitch, FontManager
+#from mplsoccer.statsbomb import read_event, EVENT_SLUG
+
+r_df = pd.read_csv(r"D:\Users\Manav\Downloads\Marcus Rashford\MUFC2021-22.csv")
+
+r_df['x'] = r_df['x']*1.2
+r_df['y'] = r_df['y']*.8
+r_df['endX'] = r_df['endX']*1.2
+r_df['endY'] = r_df['endY']*.8
+
+action = r_df
+
+Nuno = action[(action['playerId']==300299) & (action['outcomeType'] =='Successful') & (action['type']=='BallTouch')]
+
+Nuno
+
+xBallTouch=Nuno['x'].values
+yBallTouch=Nuno['y'].values
+
+cmap_dict = cmr.cm.cmap_cd
+all_cmap_dict = {}
+for cmap_type_key in cmap_dict:
+    for key, cmap in cmap_dict[cmap_type_key].items():
+        if key[-2:] != '_r':
+            all_cmap_dict[key] = cmap
+            
+pitch = VerticalPitch(line_color='#cfcfcf', line_zorder=2, pitch_color='#122c3d')
+fig, axs = pitch.grid(nrows=11, ncols=4, space=0.1, figheight=40,
+                      title_height=0, endnote_height=0,  # no title/ endnote
+                      grid_width=0.9, grid_height=0.98, bottom=0.01, left=0.05)
+cmap_names = list(all_cmap_dict.keys())
+
+for idx, ax in enumerate(axs['pitch'].flat):
+    print(idx)
+    cmap_name = f'cmr.{cmap_names[idx]}'
+    cmap = all_cmap_dict[cmap_names[idx]]
+    kdeplot = pitch.kdeplot(r_df.x, r_df.y, ax=ax, cmap=cmap, shade=True, levels=100)
+    ax.set_title(cmap_name, fontsize=15)
+    
+    # dark
+pitch_dark = VerticalPitch(line_color='#cfcfcf', line_zorder=2, pitch_color='#122c3d')
+
+fig, ax = pitch_dark.draw()
+kdeplot_dark = pitch_dark.kdeplot(r_df.x, r_df.y, ax=ax, cmap=cmr.bubblegum, shade=True, levels=100)
+
+# light
+pitch_light = VerticalPitch(line_zorder=2)
+fig, ax = pitch_light.draw()
+kdeplot_light = pitch_light.kdeplot(r_df.x, r_df.y, ax=ax, cmap=cmr.voltage_r, shade=True, levels=100)
+
+pearl_earring_cmap = LinearSegmentedColormap.from_list("Pearl Earring - 10 colors",
+                                                       ['#15242e', '#4393c4'], N=10)
+el_greco_violet_cmap = LinearSegmentedColormap.from_list("El Greco Violet - 10 colors",
+                                                         ['#332a49', '#8e78a0'], N=10)
+el_greco_yellow_cmap = LinearSegmentedColormap.from_list("El Greco Yellow - 10 colors",
+                                                         ['#7c2e2a', '#f2dd44'], N=10)
+flamingo_cmap = LinearSegmentedColormap.from_list("Flamingo - 10 colors",
+                                                  ['#e3aca7', '#c03a1d'], N=10)
+# same color maps but with 100 colors
+pearl_earring_cmap_100 = LinearSegmentedColormap.from_list("Pearl Earring - 100 colors",
+                                                           ['#15242e', '#4393c4'], N=100)
+el_greco_violet_cmap_100 = LinearSegmentedColormap.from_list("El Greco Violet - 100 colors",
+                                                             ['#3b3154', '#8e78a0'], N=100)
+el_greco_yellow_cmap_100 = LinearSegmentedColormap.from_list("El Greco Yellow - 100 colors",
+                                                             ['#7c2e2a', '#f2dd44'], N=100)
+flamingo_cmap_100 = LinearSegmentedColormap.from_list("Flamingo - 100 colors",
+                                                      ['#e3aca7', '#c03a1d'], N=100)
+                                                      
+fig, axes = plt.subplots(figsize=(12, 5), nrows=8, ncols=2, constrained_layout=True)
+gradient = np.linspace(0, 1, 256)
+gradient = np.repeat(np.expand_dims(gradient, axis=0), repeats=10, axis=0)
+cmaps = [pearl_earring_cmap, flamingo_cmap,
+         el_greco_violet_cmap, el_greco_yellow_cmap,
+         pearl_earring_cmap_100, flamingo_cmap_100,
+         el_greco_violet_cmap_100, el_greco_yellow_cmap_100]
+fm = FontManager()
+for i, cmap in enumerate(cmaps):
+    axes[i, 0].axis('off')
+    axes[i, 1].axis('off')
+    axes[i, 0].imshow(gradient, cmap=cmap)
+    axes[i, 1].text(0, 0.5, cmap.name, va='center', fontsize=20, fontproperties=fm.prop)
+    
+    pitch = VerticalPitch(line_color='#cfcfcf', line_zorder=2, pitch_color='#122c3d')
+fig, ax = pitch.draw(figsize=(4.4, 6.4))
+bs = pitch.bin_statistic(xGoal, yGoal, bins=(12, 8))
+heatmap = pitch.heatmap(bs, edgecolors='#122c3d', ax=ax, cmap=cmr.tropical)
+plt.gca().invert_xaxis()
+
+pitch = VerticalPitch(line_color='#cfcfcf', line_zorder=2, pitch_color='black')
+fig, ax = pitch.draw(figsize=(4.4, 6.4))
+# note use the colormap with 100 colors for a smoother finish
+# sphinx_gallery_thumbnail_path = 'gallery/pitch_plots/images/sphx_glr_plot_cmap_007.png'
+kdeplot = pitch.kdeplot(xBallTouch,yBallTouch, ax=ax, cmap='cmr.apple', shade=True, levels=100)
+plt.gca().invert_xaxis()
